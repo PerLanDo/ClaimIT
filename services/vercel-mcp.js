@@ -1,47 +1,71 @@
-const { Vercel } = require('@vercel/sdk');
+// Using Vercel REST API
+const https = require('https');
 
 class VercelMCP {
   constructor() {
-    this.vercel = new Vercel({
-      token: process.env.VERCEL_TOKEN,
-      teamId: process.env.VERCEL_TEAM_ID
+    this.token = process.env.VERCEL_TOKEN;
+    this.teamId = process.env.VERCEL_TEAM_ID;
+    this.baseUrl = 'https://api.vercel.com';
+  }
+
+  async makeRequest(endpoint, method = 'GET', data = null) {
+    return new Promise((resolve, reject) => {
+      const url = new URL(endpoint, this.baseUrl);
+      if (this.teamId) {
+        url.searchParams.append('teamId', this.teamId);
+      }
+
+      const options = {
+        hostname: url.hostname,
+        port: 443,
+        path: url.pathname + url.search,
+        method: method,
+        headers: {
+          'Authorization': `Bearer ${this.token}`,
+          'Content-Type': 'application/json'
+        }
+      };
+
+      if (data && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
+        const postData = JSON.stringify(data);
+        options.headers['Content-Length'] = Buffer.byteLength(postData);
+      }
+
+      const req = https.request(options, (res) => {
+        let responseData = '';
+        res.on('data', (chunk) => {
+          responseData += chunk;
+        });
+        res.on('end', () => {
+          try {
+            const parsed = JSON.parse(responseData);
+            if (res.statusCode >= 200 && res.statusCode < 300) {
+              resolve(parsed);
+            } else {
+              reject(new Error(parsed.error || `HTTP ${res.statusCode}`));
+            }
+          } catch (error) {
+            reject(error);
+          }
+        });
+      });
+
+      req.on('error', (error) => {
+        reject(error);
+      });
+
+      if (data && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
+        req.write(JSON.stringify(data));
+      }
+
+      req.end();
     });
   }
 
   // Project operations
-  async createProject(projectData) {
-    try {
-      const project = await this.vercel.projects.create({
-        name: projectData.name,
-        framework: projectData.framework || 'nextjs',
-        gitRepository: projectData.gitRepository,
-        rootDirectory: projectData.rootDirectory,
-        buildCommand: projectData.buildCommand,
-        outputDirectory: projectData.outputDirectory,
-        installCommand: projectData.installCommand,
-        devCommand: projectData.devCommand
-      });
-      
-      return { success: true, data: project };
-    } catch (error) {
-      console.error('Vercel create project error:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  async getProject(projectId) {
-    try {
-      const project = await this.vercel.projects.get(projectId);
-      return { success: true, data: project };
-    } catch (error) {
-      console.error('Vercel get project error:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
   async listProjects() {
     try {
-      const projects = await this.vercel.projects.list();
+      const projects = await this.makeRequest('/v1/projects');
       return { success: true, data: projects };
     } catch (error) {
       console.error('Vercel list projects error:', error);
@@ -49,56 +73,20 @@ class VercelMCP {
     }
   }
 
-  async updateProject(projectId, updates) {
+  async getProject(projectId) {
     try {
-      const project = await this.vercel.projects.update(projectId, updates);
+      const project = await this.makeRequest(`/v1/projects/${projectId}`);
       return { success: true, data: project };
     } catch (error) {
-      console.error('Vercel update project error:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  async deleteProject(projectId) {
-    try {
-      await this.vercel.projects.delete(projectId);
-      return { success: true };
-    } catch (error) {
-      console.error('Vercel delete project error:', error);
+      console.error('Vercel get project error:', error);
       return { success: false, error: error.message };
     }
   }
 
   // Deployment operations
-  async createDeployment(projectId, deploymentData) {
-    try {
-      const deployment = await this.vercel.deployments.create({
-        projectId,
-        ...deploymentData
-      });
-      
-      return { success: true, data: deployment };
-    } catch (error) {
-      console.error('Vercel create deployment error:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  async getDeployment(deploymentId) {
-    try {
-      const deployment = await this.vercel.deployments.get(deploymentId);
-      return { success: true, data: deployment };
-    } catch (error) {
-      console.error('Vercel get deployment error:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
   async listDeployments(projectId) {
     try {
-      const deployments = await this.vercel.deployments.list({
-        projectId
-      });
+      const deployments = await this.makeRequest(`/v1/deployments?projectId=${projectId}`);
       return { success: true, data: deployments };
     } catch (error) {
       console.error('Vercel list deployments error:', error);
@@ -106,74 +94,20 @@ class VercelMCP {
     }
   }
 
-  async cancelDeployment(deploymentId) {
+  async getDeployment(deploymentId) {
     try {
-      await this.vercel.deployments.cancel(deploymentId);
-      return { success: true };
+      const deployment = await this.makeRequest(`/v1/deployments/${deploymentId}`);
+      return { success: true, data: deployment };
     } catch (error) {
-      console.error('Vercel cancel deployment error:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  // Domain operations
-  async addDomain(projectId, domain) {
-    try {
-      const result = await this.vercel.domains.create({
-        projectId,
-        name: domain
-      });
-      
-      return { success: true, data: result };
-    } catch (error) {
-      console.error('Vercel add domain error:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  async removeDomain(domain) {
-    try {
-      await this.vercel.domains.delete(domain);
-      return { success: true };
-    } catch (error) {
-      console.error('Vercel remove domain error:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  async listDomains(projectId) {
-    try {
-      const domains = await this.vercel.domains.list({
-        projectId
-      });
-      return { success: true, data: domains };
-    } catch (error) {
-      console.error('Vercel list domains error:', error);
+      console.error('Vercel get deployment error:', error);
       return { success: false, error: error.message };
     }
   }
 
   // Environment variables
-  async setEnvironmentVariable(projectId, key, value, environments = ['production', 'preview', 'development']) {
-    try {
-      const envVar = await this.vercel.env.create({
-        projectId,
-        key,
-        value,
-        type: 'encrypted',
-        target: environments
-      });
-      
-      return { success: true, data: envVar };
-    } catch (error) {
-      console.error('Vercel set environment variable error:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
   async getEnvironmentVariables(projectId) {
     try {
-      const envVars = await this.vercel.env.list(projectId);
+      const envVars = await this.makeRequest(`/v1/projects/${projectId}/env`);
       return { success: true, data: envVars };
     } catch (error) {
       console.error('Vercel get environment variables error:', error);
@@ -181,52 +115,16 @@ class VercelMCP {
     }
   }
 
-  async deleteEnvironmentVariable(projectId, envVarId) {
+  // Health check
+  async healthCheck() {
     try {
-      await this.vercel.env.delete(projectId, envVarId);
-      return { success: true };
+      const projects = await this.listProjects();
+      return { success: true, data: { status: 'healthy', projects: projects.data } };
     } catch (error) {
-      console.error('Vercel delete environment variable error:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  // Analytics
-  async getAnalytics(projectId, options = {}) {
-    try {
-      const analytics = await this.vercel.analytics.get({
-        projectId,
-        ...options
-      });
-      
-      return { success: true, data: analytics };
-    } catch (error) {
-      console.error('Vercel get analytics error:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  // Functions
-  async listFunctions(projectId) {
-    try {
-      const functions = await this.vercel.functions.list(projectId);
-      return { success: true, data: functions };
-    } catch (error) {
-      console.error('Vercel list functions error:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  async getFunctionLogs(projectId, functionId) {
-    try {
-      const logs = await this.vercel.functions.getLogs(projectId, functionId);
-      return { success: true, data: logs };
-    } catch (error) {
-      console.error('Vercel get function logs error:', error);
+      console.error('Vercel health check error:', error);
       return { success: false, error: error.message };
     }
   }
 }
 
 module.exports = VercelMCP;
-

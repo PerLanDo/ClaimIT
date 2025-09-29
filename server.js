@@ -7,6 +7,7 @@ require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const isVercel = !!process.env.VERCEL;
 
 // Initialize MCP services
 const mcpManager = new MCPManager();
@@ -97,17 +98,32 @@ app.use('*', (req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
-app.listen(PORT, async () => {
-  console.log(`ClaimIT server running on port ${PORT}`);
-  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-  
-  // Initialize MCP services
-  try {
-    await mcpManager.initialize();
-    console.log('MCP services initialized successfully');
-  } catch (error) {
-    console.error('Failed to initialize MCP services:', error);
-  }
-});
+// Initialize MCP services on Vercel cold start
+if (isVercel) {
+  (async () => {
+    try {
+      await mcpManager.initialize();
+      console.log('MCP services initialized successfully (Vercel)');
+    } catch (error) {
+      console.error('Failed to initialize MCP services (Vercel):', error);
+    }
+  })();
+}
+
+// Only listen locally (do not bind a port on Vercel)
+if (!isVercel) {
+  app.listen(PORT, async () => {
+    console.log(`ClaimIT server running on port ${PORT}`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    
+    // Initialize MCP services
+    try {
+      await mcpManager.initialize();
+      console.log('MCP services initialized successfully');
+    } catch (error) {
+      console.error('Failed to initialize MCP services:', error);
+    }
+  });
+}
 
 module.exports = app;
