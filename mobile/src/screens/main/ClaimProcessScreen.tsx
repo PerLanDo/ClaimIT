@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   Image,
   Alert,
-} from 'react-native';
+} from "react-native";
 import {
   Card,
   TextInput,
@@ -15,12 +15,12 @@ import {
   RadioButton,
   Text as PaperText,
   ActivityIndicator,
-} from 'react-native-paper';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation, useRoute } from '@react-navigation/native';
-import * as ImagePicker from 'expo-image-picker';
-import { api, endpoints } from '../../services/api';
-import { useAuth } from '../../context/AuthContext';
+} from "react-native-paper";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useNavigation, useRoute } from "@react-navigation/native";
+import * as ImagePicker from "expo-image-picker";
+import { api, endpoints, uploadClaim } from "../../services/api";
+import { useAuth } from "../../context/AuthContext";
 
 interface Item {
   id: string;
@@ -45,24 +45,26 @@ const ClaimProcessScreen: React.FC = () => {
 
   const [item, setItem] = useState<Item | null>(null);
   const [formData, setFormData] = useState({
-    fullName: '',
-    studentId: '',
-    affiliation: '',
-    reasonForClaiming: '',
+    fullName: "",
+    studentId: "",
+    affiliation: "",
+    reasonForClaiming: "",
   });
   const [proofImage, setProofImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [claimStatus, setClaimStatus] = useState<'pending' | 'approved' | 'rejected'>('pending');
+  const [claimStatus, setClaimStatus] = useState<
+    "pending" | "approved" | "rejected"
+  >("pending");
 
   useEffect(() => {
     loadItemDetails();
     if (user) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        fullName: user.fullName || '',
-        studentId: user.studentId || '',
-        affiliation: user.department || '',
+        fullName: user.fullName || "",
+        studentId: user.studentId || "",
+        affiliation: user.department || "",
       }));
     }
   }, [itemId, user]);
@@ -72,24 +74,28 @@ const ClaimProcessScreen: React.FC = () => {
       const response = await api.get(endpoints.itemDetail(itemId));
       setItem(response.data);
     } catch (error) {
-      console.error('Error loading item details:', error);
+      console.error("Error loading item details:", error);
     } finally {
       setLoading(false);
     }
   };
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
   };
 
   const pickProofImage = async () => {
-    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    
+    const permissionResult =
+      await ImagePicker.requestMediaLibraryPermissionsAsync();
+
     if (permissionResult.granted === false) {
-      Alert.alert('Permission Required', 'Permission to access camera roll is required!');
+      Alert.alert(
+        "Permission Required",
+        "Permission to access camera roll is required!"
+      );
       return;
     }
 
@@ -106,9 +112,12 @@ const ClaimProcessScreen: React.FC = () => {
 
   const takeProofPhoto = async () => {
     const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
-    
+
     if (permissionResult.granted === false) {
-      Alert.alert('Permission Required', 'Permission to access camera is required!');
+      Alert.alert(
+        "Permission Required",
+        "Permission to access camera is required!"
+      );
       return;
     }
 
@@ -123,35 +132,37 @@ const ClaimProcessScreen: React.FC = () => {
   };
 
   const showImageOptions = () => {
-    Alert.alert(
-      'Add Proof Photo',
-      'Choose an option',
-      [
-        { text: 'Camera', onPress: takeProofPhoto },
-        { text: 'Photo Library', onPress: pickProofImage },
-        { text: 'Cancel', style: 'cancel' },
-      ]
-    );
+    Alert.alert("Add Proof Photo", "Choose an option", [
+      { text: "Camera", onPress: takeProofPhoto },
+      { text: "Photo Library", onPress: pickProofImage },
+      { text: "Cancel", style: "cancel" },
+    ]);
   };
 
   const validateForm = () => {
     if (!formData.fullName.trim()) {
-      Alert.alert('Validation Error', 'Please enter your full name');
+      Alert.alert("Validation Error", "Please enter your full name");
       return false;
     }
 
     if (!formData.studentId.trim()) {
-      Alert.alert('Validation Error', 'Please enter your Student/Staff ID');
+      Alert.alert("Validation Error", "Please enter your Student/Staff ID");
       return false;
     }
 
     if (!formData.affiliation.trim()) {
-      Alert.alert('Validation Error', 'Please enter your affiliation/department');
+      Alert.alert(
+        "Validation Error",
+        "Please enter your affiliation/department"
+      );
       return false;
     }
 
     if (!formData.reasonForClaiming.trim()) {
-      Alert.alert('Validation Error', 'Please provide a reason for claiming this item');
+      Alert.alert(
+        "Validation Error",
+        "Please provide a reason for claiming this item"
+      );
       return false;
     }
 
@@ -164,43 +175,36 @@ const ClaimProcessScreen: React.FC = () => {
     setSubmitting(true);
 
     try {
-      const submitData = new FormData();
-      
-      // Add text fields
-      submitData.append('itemId', itemId);
-      submitData.append('proofDescription', formData.reasonForClaiming.trim());
+      const claimData = {
+        itemId,
+        proofDescription: formData.reasonForClaiming.trim(),
+      };
 
-      // Add proof image if available
-      if (proofImage) {
-        submitData.append('proofImage', {
-          uri: proofImage,
-          type: 'image/jpeg',
-          name: 'proof_image.jpg',
-        } as any);
-      }
+      const proofImageData = proofImage
+        ? {
+            uri: proofImage,
+            type: "image/jpeg",
+          }
+        : undefined;
 
-      const response = await api.post(endpoints.claims, submitData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+      const response = await uploadClaim(claimData, proofImageData);
 
       Alert.alert(
-        'Success',
-        'Claim submitted successfully! The SID will review your claim and notify you of the decision.',
+        "Success",
+        "Claim submitted successfully! The SID will review your claim and notify you of the decision.",
         [
           {
-            text: 'OK',
+            text: "OK",
             onPress: () => navigation.goBack(),
           },
         ]
       );
-
     } catch (error: any) {
-      console.error('Error submitting claim:', error);
+      console.error("Error submitting claim:", error);
       Alert.alert(
-        'Error',
-        error.response?.data?.error || 'Failed to submit claim. Please try again.'
+        "Error",
+        error.response?.data?.error ||
+          "Failed to submit claim. Please try again."
       );
     } finally {
       setSubmitting(false);
@@ -210,19 +214,21 @@ const ClaimProcessScreen: React.FC = () => {
   const renderStatusIndicator = () => (
     <View style={styles.statusContainer}>
       <PaperText style={styles.statusTitle}>Claim Status Updates</PaperText>
-      
+
       <View style={styles.statusOptions}>
         <View style={styles.statusOption}>
           <RadioButton
             value="pending"
-            status={claimStatus === 'pending' ? 'checked' : 'unchecked'}
-            onPress={() => setClaimStatus('pending')}
+            status={claimStatus === "pending" ? "checked" : "unchecked"}
+            onPress={() => setClaimStatus("pending")}
             color="#8B1538"
           />
-          <PaperText style={[
-            styles.statusText,
-            claimStatus === 'pending' && styles.activeStatusText
-          ]}>
+          <PaperText
+            style={[
+              styles.statusText,
+              claimStatus === "pending" && styles.activeStatusText,
+            ]}
+          >
             Pending
           </PaperText>
         </View>
@@ -230,14 +236,16 @@ const ClaimProcessScreen: React.FC = () => {
         <View style={styles.statusOption}>
           <RadioButton
             value="approved"
-            status={claimStatus === 'approved' ? 'checked' : 'unchecked'}
-            onPress={() => setClaimStatus('approved')}
+            status={claimStatus === "approved" ? "checked" : "unchecked"}
+            onPress={() => setClaimStatus("approved")}
             color="#8B1538"
           />
-          <PaperText style={[
-            styles.statusText,
-            claimStatus === 'approved' && styles.activeStatusText
-          ]}>
+          <PaperText
+            style={[
+              styles.statusText,
+              claimStatus === "approved" && styles.activeStatusText,
+            ]}
+          >
             Approved
           </PaperText>
         </View>
@@ -245,14 +253,16 @@ const ClaimProcessScreen: React.FC = () => {
         <View style={styles.statusOption}>
           <RadioButton
             value="rejected"
-            status={claimStatus === 'rejected' ? 'checked' : 'unchecked'}
-            onPress={() => setClaimStatus('rejected')}
+            status={claimStatus === "rejected" ? "checked" : "unchecked"}
+            onPress={() => setClaimStatus("rejected")}
             color="#8B1538"
           />
-          <PaperText style={[
-            styles.statusText,
-            claimStatus === 'rejected' && styles.activeStatusText
-          ]}>
+          <PaperText
+            style={[
+              styles.statusText,
+              claimStatus === "rejected" && styles.activeStatusText,
+            ]}
+          >
             Rejected
           </PaperText>
         </View>
@@ -260,9 +270,24 @@ const ClaimProcessScreen: React.FC = () => {
 
       {/* Status Indicators */}
       <View style={styles.statusIndicators}>
-        <View style={[styles.statusDot, claimStatus === 'pending' && styles.activeDot]} />
-        <View style={[styles.statusDot, claimStatus === 'approved' && styles.activeDot]} />
-        <View style={[styles.statusDot, claimStatus === 'rejected' && styles.activeDot]} />
+        <View
+          style={[
+            styles.statusDot,
+            claimStatus === "pending" && styles.activeDot,
+          ]}
+        />
+        <View
+          style={[
+            styles.statusDot,
+            claimStatus === "approved" && styles.activeDot,
+          ]}
+        />
+        <View
+          style={[
+            styles.statusDot,
+            claimStatus === "rejected" && styles.activeDot,
+          ]}
+        />
       </View>
     </View>
   );
@@ -272,7 +297,9 @@ const ClaimProcessScreen: React.FC = () => {
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#8B1538" />
-          <PaperText style={styles.loadingText}>Loading item details...</PaperText>
+          <PaperText style={styles.loadingText}>
+            Loading item details...
+          </PaperText>
         </View>
       </SafeAreaView>
     );
@@ -298,7 +325,10 @@ const ClaimProcessScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Item Preview */}
         <Card style={styles.itemCard}>
           <Card.Content style={styles.itemContent}>
@@ -315,11 +345,15 @@ const ClaimProcessScreen: React.FC = () => {
                 </View>
               )}
             </View>
-            
+
             <View style={styles.itemDetails}>
               <PaperText style={styles.itemTitle}>{item.title}</PaperText>
-              <PaperText style={styles.itemCategory}>{item.categories.name}</PaperText>
-              <PaperText style={styles.itemLocation}>📍 {item.location}</PaperText>
+              <PaperText style={styles.itemCategory}>
+                {item.categories.name}
+              </PaperText>
+              <PaperText style={styles.itemLocation}>
+                📍 {item.location}
+              </PaperText>
             </View>
           </Card.Content>
         </Card>
@@ -327,12 +361,14 @@ const ClaimProcessScreen: React.FC = () => {
         {/* Claim Form */}
         <Card style={styles.formCard}>
           <Card.Content>
-            <PaperText style={styles.formTitle}>Claim Submission Form</PaperText>
+            <PaperText style={styles.formTitle}>
+              Claim Submission Form
+            </PaperText>
 
             <TextInput
               label="Your Name"
               value={formData.fullName}
-              onChangeText={(value) => handleInputChange('fullName', value)}
+              onChangeText={(value) => handleInputChange("fullName", value)}
               style={styles.input}
               mode="outlined"
               placeholder="Enter your full name"
@@ -341,7 +377,7 @@ const ClaimProcessScreen: React.FC = () => {
             <TextInput
               label="Student/Staff ID"
               value={formData.studentId}
-              onChangeText={(value) => handleInputChange('studentId', value)}
+              onChangeText={(value) => handleInputChange("studentId", value)}
               style={styles.input}
               mode="outlined"
               placeholder="Enter your ID number"
@@ -350,7 +386,7 @@ const ClaimProcessScreen: React.FC = () => {
             <TextInput
               label="Affiliation/Department"
               value={formData.affiliation}
-              onChangeText={(value) => handleInputChange('affiliation', value)}
+              onChangeText={(value) => handleInputChange("affiliation", value)}
               style={styles.input}
               mode="outlined"
               placeholder="e.g., Computer Science, Library Staff"
@@ -359,7 +395,9 @@ const ClaimProcessScreen: React.FC = () => {
             <TextInput
               label="Reason for Claiming"
               value={formData.reasonForClaiming}
-              onChangeText={(value) => handleInputChange('reasonForClaiming', value)}
+              onChangeText={(value) =>
+                handleInputChange("reasonForClaiming", value)
+              }
               style={styles.input}
               mode="outlined"
               multiline
@@ -369,20 +407,25 @@ const ClaimProcessScreen: React.FC = () => {
 
             {/* Proof Image Upload */}
             <View style={styles.proofImageContainer}>
-              <PaperText style={styles.proofImageLabel}>Upload Photo for Proof</PaperText>
-              
+              <PaperText style={styles.proofImageLabel}>
+                Upload Photo for Proof
+              </PaperText>
+
               <TouchableOpacity
                 style={styles.proofImageButton}
                 onPress={showImageOptions}
               >
                 <PaperText style={styles.proofImageButtonText}>
-                  {proofImage ? 'Change Proof Photo' : 'Upload Proof Photo'}
+                  {proofImage ? "Change Proof Photo" : "Upload Proof Photo"}
                 </PaperText>
               </TouchableOpacity>
 
               {proofImage && (
                 <View style={styles.proofImagePreview}>
-                  <Image source={{ uri: proofImage }} style={styles.proofImage} />
+                  <Image
+                    source={{ uri: proofImage }}
+                    style={styles.proofImage}
+                  />
                   <TouchableOpacity
                     style={styles.removeProofButton}
                     onPress={() => setProofImage(null)}
@@ -404,7 +447,7 @@ const ClaimProcessScreen: React.FC = () => {
               {submitting ? (
                 <ActivityIndicator color="white" />
               ) : (
-                'Submit Claim'
+                "Submit Claim"
               )}
             </Button>
           </Card.Content>
@@ -420,29 +463,29 @@ const ClaimProcessScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: "#F5F5F5",
   },
   scrollView: {
     flex: 1,
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   loadingText: {
     marginTop: 16,
-    color: '#757575',
+    color: "#757575",
   },
   errorContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
   },
   errorText: {
     fontSize: 18,
-    color: '#757575',
+    color: "#757575",
     marginBottom: 20,
   },
   backButton: {
@@ -450,10 +493,10 @@ const styles = StyleSheet.create({
   },
   itemCard: {
     margin: 16,
-    backgroundColor: 'white',
+    backgroundColor: "white",
   },
   itemContent: {
-    flexDirection: 'row',
+    flexDirection: "row",
     padding: 16,
   },
   itemImageContainer: {
@@ -463,44 +506,44 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 8,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: "#F5F5F5",
   },
   placeholderImage: {
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   placeholderText: {
-    color: '#757575',
+    color: "#757575",
     fontSize: 12,
   },
   itemDetails: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   itemTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#424242',
+    fontWeight: "bold",
+    color: "#424242",
     marginBottom: 4,
   },
   itemCategory: {
     fontSize: 14,
-    color: '#757575',
+    color: "#757575",
     marginBottom: 4,
   },
   itemLocation: {
     fontSize: 14,
-    color: '#757575',
+    color: "#757575",
   },
   formCard: {
     marginHorizontal: 16,
     marginBottom: 16,
-    backgroundColor: 'white',
+    backgroundColor: "white",
   },
   formTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#424242',
+    fontWeight: "bold",
+    color: "#424242",
     marginBottom: 20,
   },
   input: {
@@ -511,25 +554,25 @@ const styles = StyleSheet.create({
   },
   proofImageLabel: {
     fontSize: 16,
-    color: '#424242',
+    color: "#424242",
     marginBottom: 12,
   },
   proofImageButton: {
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: "#E0E0E0",
     borderRadius: 8,
     paddingVertical: 16,
-    alignItems: 'center',
-    backgroundColor: '#FAFAFA',
+    alignItems: "center",
+    backgroundColor: "#FAFAFA",
     marginBottom: 12,
   },
   proofImageButtonText: {
     fontSize: 16,
-    color: '#8B1538',
-    fontWeight: '500',
+    color: "#8B1538",
+    fontWeight: "500",
   },
   proofImagePreview: {
-    alignItems: 'center',
+    alignItems: "center",
   },
   proofImage: {
     width: 200,
@@ -538,15 +581,15 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   removeProofButton: {
-    backgroundColor: '#F44336',
+    backgroundColor: "#F44336",
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 6,
   },
   removeProofText: {
-    color: 'white',
+    color: "white",
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   submitButton: {
     marginTop: 8,
@@ -561,40 +604,40 @@ const styles = StyleSheet.create({
   },
   statusTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#424242',
+    fontWeight: "bold",
+    color: "#424242",
     marginBottom: 20,
   },
   statusOptions: {
     marginBottom: 20,
   },
   statusOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 12,
   },
   statusText: {
     fontSize: 16,
-    color: '#757575',
+    color: "#757575",
     marginLeft: 12,
   },
   activeStatusText: {
-    color: '#8B1538',
-    fontWeight: 'bold',
+    color: "#8B1538",
+    fontWeight: "bold",
   },
   statusIndicators: {
-    flexDirection: 'row',
-    justifyContent: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
     gap: 8,
   },
   statusDot: {
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#E0E0E0',
+    backgroundColor: "#E0E0E0",
   },
   activeDot: {
-    backgroundColor: '#8B1538',
+    backgroundColor: "#8B1538",
   },
 });
 
