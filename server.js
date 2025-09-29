@@ -11,6 +11,8 @@ const isVercel = !!process.env.VERCEL;
 
 // Initialize MCP services
 const mcpManager = new MCPManager();
+// Expose MCP manager to routes
+app.set("mcpManager", mcpManager);
 
 // Security middleware
 app.use(helmet());
