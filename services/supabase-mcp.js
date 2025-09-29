@@ -252,16 +252,18 @@ class SupabaseMCP {
       return {
         success: false,
         error:
-          "DDL commands cannot be executed through Supabase JS client directly. Please run the SQL script manually.",
+          "DDL cannot be executed via the Supabase JS client. Please run the schema SQL manually in Supabase.",
         instructions: [
-          "1. Go to your Supabase project dashboard",
-          "2. Navigate to SQL Editor",
-          "3. Run the SQL script located at: database/create_tables.sql",
-          "4. Or copy and run the following SQL commands:",
+          "1) Open your Supabase project",
+          "2) Go to SQL editor",
+          "3) Open and run database/schema.sql (preferred full schema)",
+          "   — or —",
+          "   Run database/create_tables.sql for a minimal schema (fewer columns)",
+          "4) Verify tables and policies exist per database/schema.sql",
         ],
-        sqlScript: "database/create_tables.sql",
+        sqlScript: "database/schema.sql",
         manualSteps:
-          "The SQL file has been created in your project. Please execute it in Supabase SQL Editor.",
+          "Execute database/schema.sql in the Supabase SQL Editor to create tables, indexes, and RLS policies.",
       };
     } catch (error) {
       console.error("Error creating tables:", error);
