@@ -1,0 +1,33 @@
+{
+  "mcpServers": {
+    "supabase": {
+      "command": "npx",
+      "args": ["@modelcontextprotocol/server-supabase"],
+      "env": {
+        "SUPABASE_URL": "${SUPABASE_URL}",
+        "SUPABASE_ANON_KEY": "${SUPABASE_ANON_KEY}",
+        "SUPABASE_SERVICE_ROLE_KEY": "${SUPABASE_SERVICE_ROLE_KEY}"
+      }
+    },
+    "vercel": {
+      "command": "npx",
+      "args": ["@modelcontextprotocol/server-vercel"],
+      "env": {
+        "VERCEL_TOKEN": "${VERCEL_TOKEN}",
+        "VERCEL_TEAM_ID": "${VERCEL_TEAM_ID}",
+        "VERCEL_PROJECT_ID": "${VERCEL_PROJECT_ID}"
+      }
+    },
+    "backblaze": {
+      "command": "npx",
+      "args": ["@modelcontextprotocol/server-backblaze"],
+      "env": {
+        "B2_KEY_ID": "${B2_KEY_ID}",
+        "B2_APPLICATION_KEY": "${B2_APPLICATION_KEY}",
+        "B2_BUCKET_NAME": "${B2_BUCKET_NAME}",
+        "B2_ENDPOINT": "${B2_ENDPOINT}"
+      }
+    }
+  }
+}
+
