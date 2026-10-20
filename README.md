@@ -186,7 +186,12 @@ ClaimIT_Replit/
 │   └── index.ts           # Server entry point
 ├── shared/
 │   └── schema.ts          # Shared type definitions
-└── attached_assets/        # Design documents
+├── SRS_Documentation/     # Complete IEEE SRS, UML/ERD Diagrams & Interview Transcripts
+│   ├── Final Document/    # Full IEEE SRS (00 Final SRS.md & Sections 5-11)
+│   ├── Diagram/           # Activity, Class, ERD, Sequence, Use Case & Context diagrams
+│   ├── Interview Data/    # ICTC & SID stakeholder interview transcripts
+│   └── App Information/   # App overview & Product Requirements Document (PRD)
+└── attached_assets/        # Prototype design & requirements documents
 ```
 
 ---
@@ -207,9 +212,13 @@ See **[TESTING_GUIDE.md](./TESTING_GUIDE.md)** for comprehensive testing instruc
 
 ## 📚 Documentation
 
+- **[SRS_Documentation/Final Document/00 Final SRS.md](./SRS_Documentation/Final%20Document/00%20Final%20SRS.md)** - Complete IEEE Software Requirements Specification (SRS)
+- **[SRS_Documentation/Diagram/](./SRS_Documentation/Diagram/)** - System Architecture, UML, ERD, Sequence, and Activity Diagrams
+- **[SRS_Documentation/Interview Data/](./SRS_Documentation/Interview%20Data/)** - Stakeholder Interview Transcripts (SID & ICTC)
 - **[COMPLETION_REPORT.md](./COMPLETION_REPORT.md)** - Detailed feature documentation
+- **[IMPROVEMENTS_REPORT.md](./IMPROVEMENTS_REPORT.md)** - App analysis & improvements report
 - **[TESTING_GUIDE.md](./TESTING_GUIDE.md)** - Step-by-step testing scenarios
-- **Design Document** - See `attached_assets/` folder
+- **[design_guidelines.md](./design_guidelines.md)** - MSU-IIT UI/UX brand guidelines
 
 ---
 
