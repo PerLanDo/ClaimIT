@@ -172,7 +172,7 @@ The prototype comes pre-populated with:
 ## 📁 Project Structure
 
 ```
-ClaimIT_Replit/
+ClaimIT/
 ├── client/src/
 │   ├── components/         # Reusable UI components
 │   ├── pages/             # Page components
